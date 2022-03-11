@@ -13,6 +13,9 @@
     - [Coupon Service](#coupon-service)
     - [Product Service](#product-service)
     - [Integrating Microservices](#integrating-microservices)
+- [Manual Deployment to AWS using S3](#manual-deployment-to-aws-using-s3)
+    - [Automating launch](#automating-launch)
+    - [Creating AMI and Scaling Manually](#creating-ami-and-scaling-manually)
 
 ## AWS
 
@@ -338,4 +341,85 @@ To test the integration between the two services, we can send a post request to 
   "price": 800,
   "couponCode": "SUPERSALE"
 }
+```
+
+## Manual Deployment to AWS using S3
+
+S3 is an Object based storage unlike EC2 which uses elastic block storage or elastic file storage. To manually deploy the SpringBoot application to AWS, we first need to launch an EC2 instance. We install mariadb-server on this instance for working with SQL.
+
+```
+yum install -y mariadb-server
+systemctl enable mariadb
+systemctl start mariadb
+mysql_secure_installation
+mysql -uroot -p
+```
+
+We then proceed on creating the database and tables manually
+
+```sql
+create database mydb;
+
+use mydb;
+
+create table product(
+id int AUTO_INCREMENT PRIMARY KEY,
+name varchar(20),
+description varchar(100),
+price decimal(8,3)
+);
+
+create table coupon(
+id int AUTO_INCREMENT PRIMARY KEY,
+code varchar(20) UNIQUE,
+discount decimal(8,3),
+exp_date varchar(100)
+);
+```
+
+Afterwards, we install java
+
+```
+yum install java-1.8.0-openjdk
+```
+
+We then run mvn clean and mvn install on couponservice then upload the resulting jar file into the s3 bucket. We can download it to the EC2 instance using wget.
+
+```
+wget -O couponservice-0.0.1-SNAPSHOT.jar '<presigned URL>'
+```
+
+Afterwards, we can run the jar from within the EC2 instance
+
+```
+java -jar couponservice-0.0.1-SNAPSHOT.jar
+```
+
+We'll need to open port 9091 of the ec2 instance by editing the instance's security group. Then afterwards, we can access the service via postman through its public DNS `http://ec2-54-179-226-23.ap-southeast-1.compute.amazonaws.com:9091/couponapi/coupons`. We can send a POST request to /couponapi/coupons just like before.
+
+#### Automating launch
+
+The command from the previous section `systemctl start mariadb` causes mariadb to startup automatically when the instance is booted up. To start up Spring boot automatically, we can modify `/etc/rc.local`. We first need to make sure that hte jar file is available at the ec2-user directory.
+
+```
+cat /etc/rc.local
+vi /etc/rc.local
+chmod + x /etc/rc.d/rc.local
+```
+
+We append the following at the end of the file using vim
+
+```
+java -jar /home/ec-2user/couponservice-0.0.1-SNAPSHOT.jar
+```
+
+#### Creating AMI and Scaling Manually
+
+To create a custom AMI, we just need to go to actions->Image and Template->Create Image. We will then be able to spin up instances using this image. It is important to note that we should use the same security group in order to expose out port 9091.
+
+We installed Stress which will stress our instance so that we can have a means to trigger scaling.
+
+```
+amazon-linux-extras install epel -y
+yum install stress -y
 ```
