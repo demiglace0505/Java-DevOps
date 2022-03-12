@@ -16,6 +16,22 @@
 - [Manual Deployment to AWS using S3](#manual-deployment-to-aws-using-s3)
     - [Automating launch](#automating-launch)
     - [Creating AMI and Scaling Manually](#creating-ami-and-scaling-manually)
+- [Elastic Load Balancer](#elastic-load-balancer)
+- [Auto Scaling Group](#auto-scaling-group)
+- [CloudWatch and SNS](#cloudwatch-and-sns)
+    - [SNS](#sns)
+    - [Cloudwatch Alarm](#cloudwatch-alarm)
+- [Deploy to Elastic Beanstalk using RDS](#deploy-to-elastic-beanstalk-using-rds)
+    - [Deploying the Coupon Service](#deploying-the-coupon-service)
+    - [Deploying the Product Service](#deploying-the-product-service)
+- [Docker](#docker)
+    - [Docker Components](#docker-components)
+    - [Docker in Action](#docker-in-action)
+    - [Docker Layers and Overlay Storage](#docker-layers-and-overlay-storage)
+    - [Launching a MySQL Container](#launching-a-mysql-container)
+    - [Volumes and Bind Mounts](#volumes-and-bind-mounts)
+    - [Docker Networking](#docker-networking)
+    - [Dockerfile](#dockerfile)
 
 ## AWS
 
@@ -423,3 +439,169 @@ We installed Stress which will stress our instance so that we can have a means t
 amazon-linux-extras install epel -y
 yum install stress -y
 ```
+
+## Elastic Load Balancer
+
+The Elastic Load Balancer distributes loads to multiple instances. The three ways of load balancers are Application, Classic and Network. Application and Network load balancers both work with the VPC whereas the Classic load balancer works with an EC2. Both Application and Classic will work at layer 7 (application layer) and deals with routing HTTP/HTTPS traffic. Network load balancer works with the network layer at the TCP/UDP level.
+
+In this project, we use the Classic load balancer. We specify port 80 of the load balancer HTTP protocol to redirect to the EC2 instance's port 9091. In the Health Check configuration, we set the ping protocol as HTTP port 9091 and ping path is `/couponapi/coupons/SUPERSALE`. In realtime applications, we can have a ping service that can always be pinged once the application is running.
+
+To test the load balancer, we simply take the DNS name and access it using the web browser. In this case: `http://couponserviceloadbalancer-1160041653.ap-southeast-1.elb.amazonaws.com/couponapi/coupons/SUPERSALE`
+
+## Auto Scaling Group
+
+Auto Scaling will scale up or down our EC2 instances as required. We start with creating the launch configuration. For this, we use the couponservice custom AMI that we created earlier. It is important to remember that the security group used by the ASG should have the SSH port open.
+
+After creating the launch configuration, we can create an ASG using the action button. We set Desired Capacity as 2, which means the ideal capacity for the application. The minimum capacity is set to 1 which means 1 instance will be used when there is not enough load. Maximum capacity is set to 4. The scaling policy is set to Target Tracking Policy with average cpu utilization on a target value of 50. This means if the cpu utilization exceeds 50, an instance will be created.
+
+To test, we can make use of **stress** from the previous chapters. The ASG is configured for 300 seconds before spinning up new instances.
+
+```
+stress --cpu 1
+```
+
+## CloudWatch and SNS
+
+CloudWatch can be used automate Collecting, Monitoring and Analyzing of logs/data. It integrates with the other services such as EBS EC2 RDS SNS etc.
+
+#### SNS
+
+Simple Notification Service allows us to capture events and send notifications. The two elements of SNS are Topic and Subscription. **Topic** is a virtual channel which will receive messages and whichever subscribers are subscribed to that Topic, they will get that message and react to that message. A Cloud Watch Alarm can be a sender of a message to create a topic. Our microservice applications can also send messages to create a topic as well.
+
+For this demo, we create a Topic and Subscriber. When creating a subscription, we use the ARN Amazon Resource Number which a unique number for our topic. We set Email as the protocol to send us an email.
+
+#### Cloudwatch Alarm
+
+We can create a cloudwatch alarm from within the service that we are using. In this case, we can create from the status checks tab of our EC2 instance. After creating the alarm, we can use the `stress --cpu 1` command again on the EC2 instance that we attached the alarm to.
+
+## Deploy to Elastic Beanstalk using RDS
+
+Elastic Beanstalk allows us to easily deploy applications and run them seamlessly. It does so by orchestrating different AWS services such as EC2, autoscaling, s3, SNS, load balancing, etc. EBS makes it easy to deploy applications written in any programming language. In this project, we will be using RDS to deploy on EBS. RDS will also host our MySQL database.
+
+RDS allows us to use any relational database such as MySQL, Postgres, MariaDB, etc. RDS provides us with options for replication, auto backup, auto recovery and caching.
+
+We created a database instance under RDS using the standard create option. We select the MySQL engine and make sure that connectivity is set to public to be able to connect to it using MySQL workbench locally. We also need to make sure that the security group allows inbound rules for port 3306.
+
+#### Deploying the Coupon Service
+
+To deploy the coupon service to EBS, we need to define the database endpoint in our application.properties. We also changed the server port to 5000 since by default EBS exposes port 5000.
+
+```
+spring.datasource.url=jdbc:mysql://productcouponservice2.cfwvppbgxide.ap-southeast-1.rds.amazonaws.com:3306/mydb
+
+server.port=5000
+```
+
+After doing a mvn clean and install, we can go to EBS and click on Create Application button. The platform will be Java, and we will use the default Corretto 11. We then proceed on manually uploading the JAR file from our local machine.
+
+We can then access our app. We don't need to specify the port number anymore since EBS takes care of internally running at port 5000. We can now send requests to `http://couponservice-env.eba-vq3e6j4q.ap-southeast-1.elasticbeanstalk.com/couponapi/coupons` via postman.
+
+#### Deploying the Product Service
+
+For the Product Service, we do the same by updating the application.properties. It is important to note that even if the two services have the same port 5000, they will be running on different EC2 instances internally.
+
+```
+spring.datasource.url=jdbc:mysql://productcouponservice2.cfwvppbgxide.ap-southeast-1.rds.amazonaws.com:3306/mydb
+
+server.port=5000
+couponService.url=http://couponservice-env.eba-vq3e6j4q.ap-southeast-1.elasticbeanstalk.com/couponapi/coupons/
+```
+
+We can then access via postman `http://productservice-env.eba-widbma8s.ap-southeast-1.elasticbeanstalk.com/productapi/products`
+
+## Docker
+
+Docker follows the OCI Open Container Initiative standard. Docker simplfies the deployment process by giving us images which contains all the infrastructure required for the application to work along with the application itself. These images will then be used to launch containers. Docker enables us to package once then deploy anywhere on any operating system that has Docker.
+
+#### Docker Components
+
+The **Registry** is where all the docker images are stored. The **Docker Host** is the machine where we install the docker engine. The **Docker Client** uses the ability to run commands such as docker pull against the docker engine.
+
+#### Docker in Action
+
+To install docker, we need to use `yum install docker` and then `service docker start` to start the daemon.
+
+The command `docker run hello-world` will pull the hello-world image from dockerhub. With this command, the docker client contacts the docker daemon which we started earlier. The docker daemon will then pull the hello-world image from dockerhub and then create a new container from that image. The docker daemon then streams the output from the executable to our terminal.
+
+We can run a container using the `docker run -i -d -t -p 80:80 --name=mycontainer nginx`. Of particular notice is the -p 80:80, which means to expose port 80 of the container on port 80 of the host machine (host:container). This means that port 80 of the container is accessible in port 80 of the host machine, in this case, our EC2 instance. After running the nginx container, we can try visiting our EC2 instance ipv4 DNS to see the nginx welcome page.
+
+Docker commit allows us to save the current state of a container into an image. `docker commit <container-id> imageName`. However, it is much better to use a dockerfile to create images. In this example, we pulled the ubuntu image and executed it using
+
+```
+docker exec -it <id> bash
+```
+
+We then installed apache2
+
+```
+apt-get update
+apt-get install apache2
+```
+
+And then finally we commit it
+
+```
+docker commit 798660049c49 mywebserver
+```
+
+When we do a `docker images`, we will find the new _mywebserver_ image.
+
+#### Docker Layers and Overlay Storage
+
+When we try doing `docker pull ubuntu` we will notice that the pull is separated into layers. The final image is the combination of these layers. We can see the layers by running `docker history ubuntu`
+
+```
+2b4cba85892a   9 days ago   /bin/sh -c #(nop)  CMD ["bash"]                 0B
+<missing>      9 days ago   /bin/sh -c #(nop) ADD file:8a50ad78a668527e9…   72.8MB
+```
+
+The CMD and ADD are called as dockerfile commands. If we do `docker info`, we can find the property **Docker Root Dir** which points to the location where docker stores files. The _overlay2_ directory is the storage driver of docker. Inside this, it contains all the layers of the ubuntu image we pulled. Docker uses the Union File System to integrate the various layer to come up with the complete image.
+
+#### Launching a MySQL Container
+
+```
+docker run -dit -p 6666:3306 --name=demiglace-mysql --env="MYSQL_ROOT_PASSWORD=t est1234" --env="MYSQL_DATABASE=emp" mysql
+```
+
+We will map port 3306 of the container to the host's 6666. We also pass in the password as an environment variable. The MYSQL*DATABASE environment variable will automatically create the \_emp* database upon startup
+
+We can then enter the command line using `docker exec -it demiglace-mysql bash` and then access mysql using `mysql -uroot -p`
+
+#### Volumes and Bind Mounts
+
+When we store some data inside the container's writable layer and then stop the container, we will still have that data. But when we delete the container and relaunch a container form the same image, the data will no longer be there. Bind Mounts and Volumes helps us persist the data on the host machine instead of storing data directly on the container. **Bind Mount** will use any folder on the host machine to store the data. **Volume** on the other hand is a docker object and is managed by docker inside the folder /var/lib/docker/volumes.
+
+Volumes are recommended way for persisting storage. To create a volume, we use `docker volume create name`. To mount the volume, we can do so while running a container `docker run -dit --mount source=myvol,destination=/tmp nginx`. The destination property is the folder on the container that will be mapped to the source volume. The volumes are stored under `/var/lib/docker/volumes/
+
+To use bind mounts, we can run `docker run -dit -v /root/mydata:/tmp ubuntu`. The /tmp directory from the container will be bound to /root/mydata
+
+#### Docker Networking
+
+By default docker comes with bridge, host, none networks. We can assign our own subnets when we create our own network. `docker network create demonw --subnet=172.19.0.0/16`. We can now assign this network to a new container `docker run --name webserver --net demonw --ip 172.19.0.2 -h web.demiglace.com -p 82:80 -ti ubuntu /bin/bash`.
+
+We can disconnect a container from a network using `docker network disconnect demonw webserver`. And to connect: `docker network connect demonw webserver`
+
+#### Dockerfile
+
+We can use Dockerfiles to create our own images. The Dockerfile contains commands to assemble an image.
+
+- **FROM** is used for specifying a base image
+- **COPY** can be used to copy files to a particular folder in the image
+- **ENV** is used to set environment variables
+- **RUN** will run a particular command during the image build process
+- **CMD** will be executed after the image is built
+- **EXPOSE** will expose out a particular port on the docker image
+
+In this project, we use Centos as the base OS, and we install httpd on top of it. We add a index.html file and expose out port 80.
+
+```Dockerfile
+FROM centos
+RUN yum install -y httpd
+ADD index.html /var/www/html
+CMD apachectl -D FOREGROUND
+EXPOSE 80
+MAINTAINER demiglace
+ENV myenv myval
+```
+
+We can then build the image using the following command `docker build -t my-webserver .`. The docker daemon will then execute the instructions one at a time.
