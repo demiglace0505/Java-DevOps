@@ -32,6 +32,10 @@
     - [Volumes and Bind Mounts](#volumes-and-bind-mounts)
     - [Docker Networking](#docker-networking)
     - [Dockerfile](#dockerfile)
+- [Dockerize Micro Services](#dockerize-micro-services)
+    - [Build Images](#build-images)
+    - [Launch the Containers](#launch-the-containers)
+    - [Docker Hub](#docker-hub)
 
 ## AWS
 
@@ -605,3 +609,117 @@ ENV myenv myval
 ```
 
 We can then build the image using the following command `docker build -t my-webserver .`. The docker daemon will then execute the instructions one at a time.
+
+## Dockerize Micro Services
+
+We first containerize the database server using mysql. We do so by running a docker container for mysql. We expose the port 3306 port of the docker host to our local host through port 6666.
+
+```
+docker run -d -p 6666:3306 --name=docker-mysql --env="MYSQL_ROOT_PASSWORD=test1234" --env="MYSQL_DATABASE=mydb" mysql
+docker exec -it docker-mysql bash
+```
+
+This brings us to the bash shell of the container. From there we enter mysql and then create the tables.
+
+```
+# mysql -uroot -p
+test1234
+mysql> show databases;
+```
+
+We can set up the tables using a separate command line. This will run the tables.sql file on the same directory as the command line. We can also do this by using MySQL workbench and connecting to port 6666.
+
+```
+docker exec -i docker-mysql mysql -uroot -ptest1234 mydb<tables.sql
+```
+
+```sql
+use mydb;
+
+create table product(
+id int AUTO_INCREMENT PRIMARY KEY,
+name varchar(20),
+description varchar(100),
+price decimal(8,3)
+);
+
+create table coupon(
+id int AUTO_INCREMENT PRIMARY KEY,
+code varchar(20) UNIQUE,
+discount decimal(8,3),
+exp_date varchar(100)
+);
+```
+
+To dockerize the coupon and product service, we make use of a Dockerfile. Using **FROM** we use java:8 as the base, and then afterwards the **ADD** is where we copy the Springboot jar file into the container (using the same name). Finally, we specify the launch parameters to the **ENTRYPOINT**.
+
+```dockerfile
+FROM java:8
+ADD target/couponservice-0.0.1-SNAPSHOT.jar couponservice-0.0.1-SNAPSHOT.jar
+ENTRYPOINT [ "java","-jar","couponservice-0.0.1-SNAPSHOT.jar" ]
+```
+
+#### Build Images
+
+Before building the images, we first need to update our application.properties to point out to the new data source url. In this case, the coupon service container will be named as coupon-app.
+
+```
+// coupon service
+spring.datasource.url=jdbc:mysql://docker-mysql:3306/mydb
+spring.datasource.username=root
+spring.datasource.password=test1234
+
+server.port=9091
+
+// product service
+spring.datasource.url=jdbc:mysql://docker-mysql:3306/mydb
+spring.datasource.username=root
+spring.datasource.password=test1234
+
+server.port=9090
+couponService.url=http://coupon-app:9091/couponapi/coupons/
+```
+
+We will be using the command line for generating a jar, since the services would fail the tests from the above chagnes.
+
+```
+mvn clean package -DskipTests
+```
+
+And to finally build the images,
+
+```
+docker build -f Dockerfile -t coupon_app .
+docker build -f Dockerfile -t product_app .
+```
+
+#### Launch the Containers
+
+We can use the command line to launch the microservice containers. We need to use the `--link` flag to link the microservice with the mysqk container created earlier. We will expose port 9091 of the container to the local machine's port 10555. For the product service, we need to link both mysql and coupon service.
+
+```
+docker run -t --name=coupon-app --link docker-mysql:mysql -p 10555:9091 coupon_app
+docker run -t --link docker-mysql:mysql --link coupon-app:coupon_app -p
+10666:9090 product_app
+```
+
+The urls for testing will be
+
+```
+http://localhost:10555/couponapi
+http://localhost:10666/productapi
+```
+
+#### Docker Hub
+
+To push to docker hub, we run the following command
+
+```
+docker login
+
+docker tag product_app demiglace0505/productservice
+docker tag coupon_app demiglace0505/couponservice
+
+docker push demiglace0505/couponservice
+docker push demiglace0505/productservice
+```
