@@ -41,6 +41,10 @@
     - [Volumes](#volumes)
     - [Composing the MySQL Service](#composing-the-mysql-service)
     - [Composing MicroServices](#composing-microservices)
+- [Kubernetes](#kubernetes)
+    - [Kubernetes Architecture](#kubernetes-architecture)
+    - [Kubernetes Installation Types](#kubernetes-installation-types)
+    - [Kubectl Configuration](#kubectl-configuration)
 
 ## AWS
 
@@ -862,3 +866,21 @@ services:
 ```
 
 We then run `docker-compose up` to compose the containers.
+
+## Kubernetes
+
+Microservice applications that are containerized needs to be fault-tolerant and should be able to scale on-demand. With Container Orchestration, all our containers are grouped into a cluster wherein the deployment and management is automated. Kubernetes makes CICD easy while taking care of the lifecycle of the containers.
+
+Kubernetes uses an object model to represent different persistence entities. We create these objects using a spec yaml. The **Pod** is a logical group of similar contianers. Pods however are not self-healing or fault tolerant on their own. For that, we need **ReplicaSets** which will make sure that the desired number of pods is always running. Instead of managing pods and replicas separately, we can create **Deployments**. The **Namespace** will help us host applications from across the organization by creating virtual clusters. It is similar to packages in Java.
+
+#### Kubernetes Architecture
+
+All the machines inside a kubernetes cluster are referred to as nodes. The master node is the one that manages the entire cluster. The worker nodes are responsible for launching pods, creating containers, etc. We interact with the master node through a RESTful API which we interact with using **kubectl**. The **Scheduler** is responsible for scheduling the pods on the worker nodes. It is responsible for launching the pods inside worker nodes as required by the application. The **Control Manager** runs in the background and is responsible for making sure that the cluster is in the desired state. The **Api Server** maintains the current state of the cluster in a distributed storage service called etcd, which is a name-value storage which stores object information such as pods, etc. When we have multiple master nodes, the etcd will be stored in all master nodes. In the worker node, a **kubelet** have apis which the Api Server calls for communication with the master node. We never interact directly with the kubelet, but only through the Api Server. The **Proxy** is the load balancer and network proxy. There is a proxy for each and every worker node
+
+#### Kubernetes Installation Types
+
+In a **Single Node Installation**, all the master components and worker components live in a single node/machine. It is good for development and quick testing, but not for prod. Minikube and Docker Desktop gives us a single node cluster. In a **Single Master and Multi Worker**, we have one master running on its own node and multiple workers which has its own node. In **Multi Master and Multi Worker**, we have a highly available cluster with multiple masters. The etcd will only be on a single master in this type. We can also replicate the etcd into multiple masters as well. This is called **Multi etcd**
+
+#### Kubectl Configuration
+
+The kubectl command can be used to connect to a kubernetes cluster and work with the resources in that cluster. All the connection information is stored in a configuration file which we can view using `kubectl config view`. The important pieces in a config file are clusters, users, and context.
