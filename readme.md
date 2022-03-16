@@ -36,6 +36,11 @@
     - [Build Images](#build-images)
     - [Launch the Containers](#launch-the-containers)
     - [Docker Hub](#docker-hub)
+- [Docker Compose](#docker-compose)
+    - [Networks](#networks)
+    - [Volumes](#volumes)
+    - [Composing the MySQL Service](#composing-the-mysql-service)
+    - [Composing MicroServices](#composing-microservices)
 
 ## AWS
 
@@ -723,3 +728,137 @@ docker tag coupon_app demiglace0505/couponservice
 docker push demiglace0505/couponservice
 docker push demiglace0505/productservice
 ```
+
+## Docker Compose
+
+Docker Compose is a tool using which we can run one or more containers required for our microservice applications. With Docker Compose there is no need to write scripts to start our containers. Using a single YAML configuration file, each containers will be defined as services and we can launch all components using the `docker-compose up` command.
+
+The **version** can be used to introduce or deperecate elements. **services** is used to define the group of services. Under that we can define a container. In the following example, the image will be based on httpd and we will give it a container name of mywebserver. Port 80 will be exposed out on port 8080.
+
+```yaml
+version: "3.3"
+services:
+  web:
+    image: httpd
+    container_name: mywebserver
+    ports:
+      - "8080:80"
+```
+
+The above configuration is comparable to `docker run -dit --name mywebserver -p 8080:80 httpd`. To verify that the above configuration is valid, we can run `docker-compose config` at the directory of the docker-compose.yaml file. `docker-compose up -d` can be used to launch the container in a detached state.
+
+#### Networks
+
+When we run docker-compose up, it creates a default network and attaches it to our containers. The default network has the naming convention of `directoryName_default`. We can also define and provide our own networks that will be created. The root level _networks_ is used to define all the networks, and the _networks_ element under a service is for using the network. Once we use `docker-compose up`, it will create and use the network `dockercomposedemo_webnetwork`.
+
+```yaml
+version: "3.3"
+services:
+  web:
+    image: httpd
+    container_name: mywebserver
+    networks:
+      - webnetwork
+    ports:
+      - "8080:80"
+networks:
+  webnetwork:
+    driver: bridge
+  dbnetwork:
+    driver: bridge
+```
+
+#### Volumes
+
+We can mount volume by specifiying the **volumes** element. The volume myvol in this case will be mounted to the `/data` directory.
+
+```yaml
+version: "3.3"
+services:
+  web:
+    image: httpd
+    container_name: mywebserver
+    ports:
+      - "8080:80"
+    volumes:
+      - myvol:/data
+volumes:
+  myvol:
+```
+
+#### Composing the MySQL Service
+
+In the following docker-compose configuration, we launch a container called docker-mysql using the mysql image. We specify the environment variables for the database name and root password. Along this, we defomethe root host, which means tells the mysql server inside the container which machines can access the mysql server inside the container. The `%` is a wildcard. We automate creation of the tables using the **volumes** element. We mount the `./sql` folder inside couponservice into `/docker-entrypoint-initdb.d`. This will make the container search for sql files inside the sql folder and execute them. We then expose out port 3306 into 6666.
+
+```yaml
+version: "3"
+services:
+  docker-mysql:
+    container_name: docker-mysql
+    image: mysql
+    restart: always
+    environment:
+      MYSQL_DATABASE: mydb
+      MYSQL_ROOT_PASSWORD: test
+      MYSQL_ROOT_HOST: "%"
+    volumes:
+      - ./sql:/docker-entrypoint-initdb.d
+    ports:
+      - "6666:3306"
+    healthcheck:
+      test: '/usr/bin/mysql --user=root --password=test1234 --execute "SHOW DATABASES"'
+      interval: 4s
+      timeout: 20s
+      retries: 5
+```
+
+#### Composing MicroServices
+
+The WAIT_HOSTS element in the environment will keep checking if mysql is running on port 3306. We also need to provide the container dependencies.
+
+```yaml
+version: "3"
+services:
+  product-app:
+    container_name: product-app
+    image: demiglace0505/productservice
+    restart: on-failure
+    ports:
+      - 10666:9090
+    environment:
+      WAIT_HOSTS: mysql:3306
+    depends_on:
+      - docker-mysql
+      - coupon-app
+
+  coupon-app:
+    container_name: coupon-app
+    image: demiglace0505/couponservice
+    restart: on-failure
+    ports:
+      - 10555:9091
+    environment:
+      WAIT_HOSTS: mysql:3306
+    depends_on:
+      - docker-mysql
+
+  docker-mysql:
+    container_name: docker-mysql
+    image: mysql
+    restart: always
+    environment:
+      MYSQL_DATABASE: mydb
+      MYSQL_ROOT_PASSWORD: test1234
+      MYSQL_ROOT_HOST: "%"
+    volumes:
+      - ./sql:/docker-entrypoint-initdb.d
+    ports:
+      - 6666:3306
+    healthcheck:
+      test: '/usr/bin/mysql --user=root --password=test1234 --execute "SHOW DATABASES"'
+      interval: 4s
+      timeout: 20s
+      retries: 5
+```
+
+We then run `docker-compose up` to compose the containers.

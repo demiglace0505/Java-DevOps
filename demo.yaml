@@ -1,0 +1,19 @@
+# Simple data
+customerName: demiglace
+orderId: 123
+date: 12/12/2022
+shipped: false
+moreData: null
+# List
+products:
+  # Object
+  - name: Mac
+    price: 1500
+  - name: Legion
+    price: 1000
+  - name: Nitro
+    price: 900
+# Dictionary type:
+address:
+  street: Dogeville
+  city: DogeCity

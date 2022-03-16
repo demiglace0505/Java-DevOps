@@ -1,0 +1,39 @@
+{
+  "name": "",
+  "isOrdered": true,
+  "folders": {
+    "couponservice": {
+      "name": "couponservice",
+      "isOrdered": true,
+      "folders": {},
+      "files": {}
+    },
+    "hellomaven": {
+      "name": "hellomaven",
+      "isOrdered": true,
+      "folders": {},
+      "files": {}
+    },
+    "java-project": {
+      "name": "java-project",
+      "isOrdered": true,
+      "folders": {},
+      "files": {}
+    },
+    "java-web-project": {
+      "name": "java-web-project",
+      "isOrdered": true,
+      "folders": {},
+      "files": {}
+    },
+    "productservice": {
+      "name": "productservice",
+      "isOrdered": true,
+      "folders": {},
+      "files": {}
+    }
+  },
+  "files": {
+    "readme": 0
+  }
+}
