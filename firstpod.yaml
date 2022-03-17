@@ -1,0 +1,16 @@
+kind: Pod
+apiVersion: v1
+metadata:
+  name: firstpod
+  labels:
+    app: fp
+    release: stable
+    team: doge
+  annotations:
+    logsDir: "/etc/logs"
+spec:
+  containers:
+    - name: db
+      image: redis
+    - name: web
+      image: httpd

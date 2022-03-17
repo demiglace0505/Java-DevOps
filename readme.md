@@ -45,6 +45,17 @@
     - [Kubernetes Architecture](#kubernetes-architecture)
     - [Kubernetes Installation Types](#kubernetes-installation-types)
     - [Kubectl Configuration](#kubectl-configuration)
+    - [Pod](#pod)
+    - [Pod Life Cycle](#pod-life-cycle)
+    - [Labels and Selectors](#labels-and-selectors)
+    - [Namespaces](#namespaces)
+    - [Deployment](#deployment)
+    - [Service](#service)
+    - [Rolling Updates](#rolling-updates)
+    - [Volumes](#volumes-1)
+    - [ConfigMaps](#configmaps)
+    - [Secrets](#secrets)
+    - [Persistent Volumes](#persistent-volumes)
 
 ## AWS
 
@@ -884,3 +895,412 @@ In a **Single Node Installation**, all the master components and worker componen
 #### Kubectl Configuration
 
 The kubectl command can be used to connect to a kubernetes cluster and work with the resources in that cluster. All the connection information is stored in a configuration file which we can view using `kubectl config view`. The important pieces in a config file are clusters, users, and context.
+
+#### Pod
+
+The pod is the smallest and most important object in kubernetes. A pod is an abstraction that logically groups a set of related containers. The pods will have the resources that will be needed by the containers to work such as networking, security, configuration, volumes etc. Although a pod is defined as a group of containers, it is a good practice to use only one container per pod.
+
+There are two ways to create a pod: using kubectl and through a YAML file. However, in real time we will be creating pods using Deployments to make it easier to create multiple number of pods/replicas and maintain cluster state. Pods are exposed to other pods through Services.
+
+We can create an nginx pod using the following kubectl command.
+
+```
+minikube start
+kubectl run firstpod --image=nginx
+
+kubectl describe pod firstpod
+```
+
+The above pod has the following events. The default scheduler assigns firstpod to our minikube node. Afterwards the kubelet on the minikube worker node pulls the image from docker hob then create and start the container.
+
+```
+  Type    Reason     Age   From               Message
+  ----    ------     ----  ----               -------
+  Normal  Scheduled  63s   default-scheduler  Successfully assigned default/firstpod to minikube
+  Normal  Pulling    63s   kubelet            Pulling image "nginx"
+  Normal  Pulled     36s   kubelet            Successfully pulled image "nginx" in 27.1696947s
+  Normal  Created    36s   kubelet            Created container firstpod
+  Normal  Started    36s   kubelet            Started container firstpod
+```
+
+To enter the pod's bash shell, we can use the command `kubectl exec -it firstpod -- /bin/bash`. We can view more details about the pod using `kubectl get pod firstpod -o yaml`
+
+The recommended approach for creating a pod is through a YAML file. The very first line of any kubernetes configuration file is **kind** wherein we define the type of resource. Under **metadata**, we provide data about the resource. **spec** is the body of the resource, wherein we define how the resource should be created.
+
+```yaml
+kind: Pod
+apiVersion: v1
+metadata:
+  name: firstpod
+spec:
+  containers:
+    - name: db
+      image: redis
+    - name: web
+      image: httpd
+```
+
+To create a pod using the yaml file, we can use `kubectl create -f firstpod.yaml`. Once we run the command, we can check using `kubectl describe pods` the status of this pod
+
+```
+  Type    Reason     Age   From               Message
+  ----    ------     ----  ----               -------
+  Normal  Scheduled  36s   default-scheduler  Successfully assigned default/firstpod to minikube
+  Normal  Pulling    36s   kubelet            Pulling image "redis"
+  Normal  Pulled     23s   kubelet            Successfully pulled image "redis" in 12.258865s
+  Normal  Created    23s   kubelet            Created container db
+  Normal  Started    23s   kubelet            Started container db
+  Normal  Pulling    23s   kubelet            Pulling image "httpd"
+  Normal  Pulled     9s    kubelet            Successfully pulled image "httpd" in 14.5372012s
+  Normal  Created    8s    kubelet            Created container web
+  Normal  Started    8s    kubelet            Started container web
+```
+
+To go inside a particular container in the pod, we use `kubectl exec -it firstpod --container db -- /bin/bash`
+
+#### Pod Life Cycle
+
+The first phase of the pod is **Pending**. This is where the pod is just created, the api server on the master node will validate that the pod configuration is ok and will create an entry in the etcd. The **Running** phase is where all the pods containers have been created and is scheduled on one of the worker nodes. **Succeeded** is where all the containers have successfully executed without any errors. **Failed** means that some containers in a pod have exited. **Unknown** is when the pod status cannot be obtained by the master node's api server.
+
+#### Labels and Selectors
+
+Labels are key-value pairs that we can assign to any resource in a kubernetes cluster to logically group and query resources. We can easily filter through pods using selectors. Labels are defined in the **metadata** section of our yaml file.
+
+```yaml
+metadata:
+  name: firstpod
+  labels:
+    app: fp
+    release: stable
+    team: doge
+```
+
+We filter through the labels using `kubectl get all --selector='app=fp'`. In this case, only those with the label app: fp will be returned.
+
+Annotations on the other hand are key-value pairs but not used to query for resources. They are just arbitrary data provided and can be used by other tools as required. Annotations are also defined under **metadata**
+
+```yaml
+annotations:
+  logsDir: "/etc/logs"
+```
+
+#### Namespaces
+
+Namespace is a logical division of a kubernetes cluster for each team or application that is deployed. Each namespace will be allocated a resource quota such as cpu, storage or even limits on the number of kubernetes of objects that can be created. This way, applications are isolated from each other. By default, pods created go into the **default** namespace. To create our own namespace, we use the command `kubectl create ns firstns`. Afterwards, we can specify in which namespace we can create a pod `kubectl create -f firstpod.yaml --namespace firstns`. To check that the pod got created in the correct namespace: we run `kubectl get pods --namespace firstns`
+
+#### Deployment
+
+A Deployment helps us manage pods and we can have multiple replicas of a pod through a deployment. Through deployments, we can tell how many pods we want and kubernetes will automatically create those replicas to maintian the desired state. We can create a deployment through the kubernetes dashboard or by a YAML file. On the other hand, there are three ways to accessing clusters: web dashboard, CLI, and REST api. Using minikube, we can launch the dashboard using the `minikube dashboard` command.
+
+We proceed with creating our own deployment yaml. We assign the deployment with labels for `app: httpd`. Under spec, we specify our replicationset. We make sure to use **selectors** that match with the pod spec. The **template** section is where we specify our pod details. The **spec** section of the template is for our containers. In here, we expose out port 80 of the container. We then create the deployment using `kubectl create -f webserver.yml`
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mywebserver
+  labels:
+    app: httpd
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: httpd
+  template:
+    metadata:
+      labels:
+        app: httpd
+    spec:
+      containers:
+        - name: myhttpd
+          image: httpd
+          ports:
+            - containerPort: 80
+```
+
+#### Service
+
+For the pods to communicate with each other, we need to use the **Service** object. It logically groups a set of pods that need to access each other so that they can communicate with each other.
+
+The **ClusterIP** service type decouples the pods and generates a virtual IP address and all communicate will happen through that virtual IP address. ClusterIP also acts as a load balancer. However, only pods within the same cluster can communicate with each other. **NodePort** service on the other hand, creates a ClusterIP internally but also exposes a port from 30000-32767 so that client applications outside the cluster will be abel to communicate with nodes in the cluster. **LoadBalancer** service type is where we expose the service using cloud providers. The NodePort and ClusterIP will be automatically created internally.
+
+In the following yaml configuration, we use a service type NodePort since we will be exposing out the pods outside the cluster. For the **selector**, we need to use whatever label we used on the pod, in this case, _httpd_. In the **ports** section, the port is labeled as 80 which means that the port 80 of the pod will be exposed and we can access the service from that port. The targetport is the port wherein we redirect traffic. We create the service using `kubectl create -f webserver-svc.yml`
+
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: webserver-service
+spec:
+  type: NodePort
+  selector:
+    app: httpd
+  ports:
+    - nodePort: 30123
+      port: 80
+      targetPort: 80
+```
+
+Running kubectl get services, we can see the following. The service internally is mapped to port 80 and 30123 is used for outside the cluster. To access port 30123 and the cluster ip, we can use `minikube service swebserver-service`
+
+```
+NAME                TYPE        CLUSTER-IP     EXTERNAL-IP   PORT(S)        AGE
+webserver-service   NodePort    10.101.0.102   <none>        80:30123/TCP   27s
+```
+
+#### Rolling Updates
+
+Deployments also allow us to update applications in a cluster with zero downtime seamlessly. The first update strategy is **Recreate**. This is where kubernetes destroys the pods and then recreates them. This doesn't provide zero downtime, but may be useful in cases where our microservices cannot have multiple versions running at the same time. **Rolling Update** is where there is zero downtime. New pods will be created, but older pods will not be taken down. Once the cluster is in the desired state, it will start destroying the older pods.
+
+Using maxSurge, we define how many pods can immediately be created as soon as an update is pushed. maxUnavailable defines how many old pods can be killed.
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mywebserver
+  labels:
+    app: httpd
+spec:
+  replicas: 10
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 3
+      maxUnavailable: 4
+  selector:
+    matchLabels:
+      app: httpd
+  template:
+    metadata:
+      labels:
+        app: httpd
+    spec:
+      containers:
+        - name: myhttpd
+          image: httpd
+          ports:
+            - containerPort: 80
+```
+
+We first create the deployment with `kubectl -create -f webserver.yml`. Then afterwards, we modified the yml file to use httpd version 2 to trigger an update. We then run `kubectl replace -f webserver.yml` to replace the cluster with the new changes.
+
+```yml
+containers:
+  - name: myhttpd
+    image: httpd:2
+    ports:
+      - containerPort: 80
+```
+
+Kubernetes internally maintains the versions of every deployment we make. Using the command `kubectl rollout history deployment`, we can see two versions of deployments. We can also see the changes made in a certain revision using `kubectl rollout history deployment mywebserver --revision=2`
+
+```
+deployment.apps/mywebserver
+REVISION  CHANGE-CAUSE
+1         <none>
+2         <none>
+```
+
+To undo a deployment, we can use `kubectl rollout undo deployment mywebserver --to-revision=1`
+
+#### Volumes
+
+Volumes in kubernetes are usually directly connected to the pod. Each container gets some space from the pod and is mounted to a folder in the container. The other containers in the pod can also exchange data with any container on the pod. Containers can also exchange data with the pod's volume.
+
+To mount a volume, we first define the volume in a pod level, and mount it in a container level.
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mywebserver
+  labels:
+    app: httpd
+spec:
+  replicas: 10
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 3
+      maxUnavailable: 4
+  selector:
+    matchLabels:
+      app: httpd
+  template:
+    metadata:
+      labels:
+        app: httpd
+    spec:
+      containers:
+        - name: myhttpd
+          image: httpd:2
+          ports:
+            - containerPort: 80
+          volumeMounts:
+            - mountPath: /data
+              name: demovol
+      volumes:
+        - name: demovol
+          hostPath:
+            path: /data
+            type: Directory
+```
+
+#### ConfigMaps
+
+ConfigMaps lets us store configuration for other objects to use. It doesn't have a spec, but has _data_ instead.
+
+```yml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: demo-configmap
+data:
+  initdb.sql: select * from product;
+    create table coupon();
+  keys: 12312312312
+    sdadasdasdasd
+```
+
+To use this in our deployment, we need to define the configmap under volumes and volumeMounts.
+
+```yml
+spec:
+  containers:
+    - name: myhttpd
+      image: httpd:2
+      ports:
+        - containerPort: 80
+      volumeMounts:
+        - mountPath: /data
+          name: demovol
+        - mountPath: /etc/config
+          name: demo-configmap-vol
+  volumes:
+    - name: demovol
+      hostPath:
+        path: /data
+        type: Directory
+    - name: demo-configmap-vol
+      configMap:
+        name: demo-configmap
+```
+
+We should be able to see initdb.sql and keys file under the directory /etc/config of our pod.
+
+```
+kubectl exec -it mywebserver-95cb4dd94-598pq -- bash
+cd /etc/config
+ls
+```
+
+#### Secrets
+
+Secrets are similar to ConfigMaps, with the difference that Secrets store sensitive information. Kubernetes stores these information in tmpf. The secret will only be available on a node when a pod requests for it. Once the pod is done using the secret, kubernetes will delete the secret from the node. In here, we specify the secret type as **Opaque** which stands for arbitrary data. Values are commonly encoded in b64.
+
+```yml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: demo-secret
+type: Opaque
+data:
+  userName: ZG9nZQ==
+  password: ZG9nZTEyMw==
+```
+
+To use in our webserver deployment, we specify it in volumes and volumeMounts
+
+```yml
+spec:
+  containers:
+    - name: myhttpd
+      image: httpd:2
+      ports:
+        - containerPort: 80
+      volumeMounts:
+        - mountPath: /data
+          name: demovol
+        - mountPath: /etc/mysecrets
+          name: my-secret
+  volumes:
+    - name: demovol
+      hostPath:
+        path: /data
+        type: Directory
+    - name: my-secret
+      secret:
+        secretName: demo-secret
+```
+
+#### Persistent Volumes
+
+PersistentVolume is a volume that lives as long as the cluster lives, it is a storage that is allocated in the cluster. PersistentVolume is used if we want a storage for our pods and containers that lives beyond the lifecycle of the pod. The pod can request for space through the PersistentVolumeClaim. We start with creating the **PersistentVolume** wherein we define the size we need. In the **spec**, we provide a 128M capacity, accessModes wherein we provide read write access only for a single node.
+
+```yaml
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: demo-persistent-volume
+spec:
+  capacity:
+    storage: 128M
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: /data/demo-persistent-volume
+```
+
+We then request space that pods needs through a **PersistentVolumeClaim**. Within the spec, we specify the amount of storage requested
+
+```yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: demo-pvc
+spec:
+  resources:
+    requests:
+      storage: 64M
+  accessModes:
+    - ReadWriteOnce
+```
+
+Afterwards, we mount the PVC to our container.
+
+```yaml
+spec:
+  containers:
+    - name: myhttpd
+      image: httpd:2
+      ports:
+        - containerPort: 80
+      volumeMounts:
+        - mountPath: /data
+          name: demovol
+        - mountPath: /data/clustervol
+          name: demo-pvc
+  volumes:
+    - name: demovol
+      hostPath:
+        path: /data
+        type: Directory
+    - name: demo-pvc
+      persistentVolumeClaim:
+        claimName: demo-pvc
+```
+
+Using `kubectl get pv` and `kubectl get pvc` we can verify that the volume has allocated
+
+```
+NAME                                       CAPACITY   ACCESS MODES   RECLAIM POLICY   STATUS      CLAIM              STORAGECLASS   REASON   AGE
+demo-persistent-volume                     128M       RWO            Retain           Available                                              8m43s
+pvc-4cc59a37-8ca1-4854-b9d0-f580719ee0e7   64M        RWO            Delete           Bound       default/demo-pvc   standard                4m41s
+
+NAME       STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS   AGE
+demo-pvc   Bound    pvc-4cc59a37-8ca1-4854-b9d0-f580719ee0e7   64M        RWO            standard       5m32s
+
+```
+
+Even if we run `kubectl delete all --all`, the persistent volume will still stay and will only get deleted if the cluster itself is deleted.
