@@ -56,6 +56,8 @@
     - [ConfigMaps](#configmaps)
     - [Secrets](#secrets)
     - [Persistent Volumes](#persistent-volumes)
+- [Deploying Microservices to Kubernetes](#deploying-microservices-to-kubernetes)
+- [Eclipse Jkube](#eclipse-jkube)
 
 ## AWS
 
@@ -1304,3 +1306,299 @@ demo-pvc   Bound    pvc-4cc59a37-8ca1-4854-b9d0-f580719ee0e7   64M        RWO   
 ```
 
 Even if we run `kubectl delete all --all`, the persistent volume will still stay and will only get deleted if the cluster itself is deleted.
+
+## Deploying Microservices to Kubernetes
+
+We start with deployment of the mysql DB. We will be defining a container that uses the MySQL image. We will be mounting the volume so that an initial database can be created for us. Instead of directly mounting a volume, we will be using configmaps. Afterwards, we will create the mysql service wherein we define the internal port, target port, and nodePort. Afterwards, we proceed with the product and coupon service deployment. We also create a Service of type nodePort to expose the services as well.
+
+The applications on the cluster would communicate with each other, it is important that our kubernetes service names matches those from our application.properties. In this case, we will be using the following configurations. Hence, the names of the services would be product-app, coupon-app, docker-mysql.
+
+```properties
+# coupon service
+spring.datasource.url=jdbc:mysql://docker-mysql:3306/mydb
+spring.datasource.username=root
+spring.datasource.password=test1234
+
+server.port=9091
+
+
+# product service
+spring.datasource.url=jdbc:mysql://docker-mysql:3306/mydb
+spring.datasource.username=root
+spring.datasource.password=test1234
+
+server.port=9090
+couponService.url=http://coupon-app:9091/couponapi/coupons/
+
+```
+
+We start with creating the Deployment of the database. The **%** value for _MYSQL_ROOT_HOST_ means that this can be accessed from any IP address.
+
+```yml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: docker-mysql
+  labels:
+    app: docker-mysql
+spec:
+  # REPLICAS SECTION
+  replicas: 1
+  selector:
+    matchLabels:
+      app: docker-mysql
+  # POD TEMPLATE
+  template:
+    metadata:
+      labels:
+        app: docker-mysql
+    # POD SPECS
+    spec:
+      containers:
+        - name: docker-mysql
+          image: mysql
+          env:
+            - name: MYSQL_DATABASE
+              value: mydb
+            - name: MYSQL_ROOT_PASSWORD
+              value: test1234
+            - name: MYSQL_ROOT_HOST
+              value: "%"
+```
+
+We will also create a configmap to initialize our database schema. With this, a file with the name `initdb.sql` will be created with the content as the value of the key.
+
+```yml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mysql-initdb-config
+data:
+  initdb.sql: use mydb;
+
+    create table product(
+    id int AUTO_INCREMENT PRIMARY KEY,
+    name varchar(20),
+    description varchar(100),
+    price decimal(8,3)
+    );
+
+    create table coupon(
+    id int AUTO_INCREMENT PRIMARY KEY,
+    code varchar(20) UNIQUE,
+    discount decimal(8,3),
+    exp_date varchar(100)
+    );
+```
+
+Afterwards, we need to mount the configmap as a volume in our db-mysql deployment. We define it and the volumeMounts under the spec section. We want the configmap to be mounted under `/docker-entrypoint-initdb.d`. This way the SQL files under that folder will be executed.
+
+```yml
+# POD SPECS
+spec:
+  volumes:
+    - name: mysql-initdb-vol
+      configMap:
+        name: mysql-initdb-config
+  containers:
+    - name: docker-mysql
+      image: mysql
+      env:
+        - name: MYSQL_DATABASE
+          value: mydb
+        - name: MYSQL_ROOT_PASSWORD
+          value: test1234
+        - name: MYSQL_ROOT_HOST
+          value: "%"
+      volumeMounts:
+        - name: mysql-initdb-vol
+          mountPath: /docker-entrypoint-initdb.d
+```
+
+Finally, we create the DB service to expose out the mysql server outside the cluster. This will enable us to access the service using our local mysql workbench. The **selector** means that whichever pods matches the label _docker-mysql_ will be picked up by this service. We use NodePort since we want this to be exposed outside the cluster as well. Port 3306 will be used internally in the cluster and will be bound to the targetPort 3306 of the container. In other words, traffic to the **port** will be redirected to the **targetPort**. **nodePort** is where we want to receive external traffic.
+
+```yml
+apiVersion: v1
+kind: Service
+metadata:
+  name: docker-mysql
+  labels:
+    app: docker-mysql
+spec:
+  selector:
+    app: docker-mysql
+  type: NodePort
+  ports:
+    - port: 3306
+      targetPort: 3306
+      nodePort: 30287
+```
+
+To deploy the db deployment, configmap and service at one go, we can use the following command
+
+```
+kubectl create -f docker-mysql-configmap.yml,docker-mysql-deployment.yml,docker-mysql-service.yml
+
+kubectl get service
+NAME           TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)          AGE
+docker-mysql   NodePort    10.100.72.193   <none>        3306:30287/TCP   34s
+
+kubectl get pods
+NAME                            READY   STATUS              RESTARTS   AGE
+docker-mysql-548449c8c9-5hr7b   0/1     ContainerCreating   0          28s
+
+kubectl get service
+NAME           TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)          AGE
+docker-mysql   NodePort    10.100.72.193   <none>        3306:30287/TCP   21s
+
+kubectl get configmaps
+NAME                  DATA   AGE
+mysql-initdb-config   1      24s
+
+minikube ip
+192.168.49.2
+```
+
+We can access the database from SQL workbench using ip address 192.168.49.2 and port number 30287.
+
+Next is creating the Coupon and Product yamls. The coupon service will be exposed in port 9091
+
+```yml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: coupon-app
+  labels:
+    app: coupon-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: coupon-app
+  # POD BODY
+  template:
+    metadata:
+      name: coupon-app
+      labels:
+        app: coupon-app
+    # POD SPECS
+    spec:
+      containers:
+        - name: coupon-app
+          image: demiglace0505/couponservice
+```
+
+```yml
+apiVersion: v1
+kind: Service
+metadata:
+  name: coupon-app
+  labels:
+    app: coupon-app
+spec:
+  type: NodePort
+  selector:
+    app: coupon-app
+  ports:
+    - port: 9091
+      targetPort: 9091
+      nodePort: 30288
+```
+
+```yml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: product-app
+  labels:
+    app: product-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: product-app
+  # POD BODY
+  template:
+    metadata:
+      name: product-app
+      labels:
+        app: product-app
+    # POD SPECS
+    spec:
+      containers:
+        - name: coupon-app
+          image: demiglace0505/productservice
+```
+
+```yml
+apiVersion: v1
+kind: Service
+metadata:
+  name: product-app
+  labels:
+    app: product-app
+spec:
+  type: NodePort
+  selector:
+    app: product-app
+  ports:
+    - port: 9090
+      targetPort: 9090
+      nodePort: 30289
+```
+
+To deploy the microservices, we can run `kubectl create -f coupon-service-deployment.yml,coupon-service-svc.yml,product-service-deployment.yml,product-service-svc.yml`. And to access, we can do it via postman by referring to the ports that we configured.
+
+```
+kubectl get services
+NAME           TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)          AGE
+coupon-app     NodePort    10.109.118.96    <none>        9091:30288/TCP   8m22s
+docker-mysql   NodePort    10.110.151.102   <none>        3306:30287/TCP   45m
+kubernetes     ClusterIP   10.96.0.1        <none>        443/TCP          46m
+product-app    NodePort    10.96.128.147    <none>        9090:30289/TCP   7m53s
+
+minikube ip
+inikube ip
+192.168.49.2
+```
+
+In this case, we can access the coupon service at `http://192.168.49.2:30288/couponapi/coupons`
+
+## Eclipse Jkube
+
+We can deploy our Spring Boot or Java application to a kubernetes cluster without writing code using the Jkube plugin. There are various helpful maven commands that can be used as well. `mvn k8s:build` will create a docker image on the fly. `mvn k8s:resource` will generate the kubernetes yaml files that are required to deploy our application, its pods and create the services unto the kubernetes cluster. `mvn k8s:apply` will apply the generated yaml files. `mvn k8s:log` will tail the logs into our terminal. `mvn k8s:debug` allows us to debug from within the IDE.
+
+We start by creating a SpringBoot RESTful endpoint project. This project uses Spring Web as a dependency.
+
+```java
+@RestController
+public class JKubeController {
+
+	@GetMapping("/hello")
+	public String hello() {
+		return "JKube is cool";
+	}
+}
+```
+
+In the pom.xml, we add the JKube plugin.
+
+```xml
+<plugin>
+	<groupId>org.eclipse.jkube</groupId>
+	<artifactId>kubernetes-maven-plugin</artifactId>
+	<version>1.0.0-rc-1</version>
+</plugin>
+```
+
+We then build the docker image using `mvn k8s:build`. To deploy to kubernetes, we first need to start minikube using `minikube start`. We then connect to minikube's docker daemon using `eval $(minikube -p minikube docker -env)`. When we execute commands for JKube, it will automatically use the daemon from minikube (unix only). The command `mvn k8s:resource` will generate the kubernetes resources for our spring boot project. The files will be under `/target/classes/META-INF/jkube/kubernetes`. To deploy, we can use `mvn k8s:apply` which will apply the generated resources to the minikube kubernetes cluster.
+
+We can easily change the service type from clusterIP to NodePort. We can do this by adding the following to the properties section in our pom.xml
+
+```xml
+	<properties>
+		<jkube.enricher.jkube-service.type>NodePort</jkube.enricher.jkube-service.type>
+	</properties>
+```
+
+We can undeploy our cluster using `mvn k8s:undeploy`. We can debug applications that are running in our kubernetes cluster through the ide using `mvn k8s:debug` which will start the application in debug mode. It enables port forwarding to port 5005. IN Eclipse, we can launch a remote debugger by going to the debugger, debug configurations -> remote java application -> create new with port 5005.

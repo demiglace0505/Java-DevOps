@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: product-app
+  labels:
+    app: product-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: product-app
+  # POD BODY
+  template:
+    metadata:
+      name: product-app
+      labels:
+        app: product-app
+    # POD SPECS
+    spec:
+      containers:
+        - name: coupon-app
+          image: demiglace0505/productservice
