@@ -58,6 +58,16 @@
     - [Persistent Volumes](#persistent-volumes)
 - [Deploying Microservices to Kubernetes](#deploying-microservices-to-kubernetes)
 - [Eclipse Jkube](#eclipse-jkube)
+- [Docker Swarm](#docker-swarm)
+    - [Architecture](#architecture)
+    - [Setting up Swarm](#setting-up-swarm)
+    - [Creating Service](#creating-service)
+    - [Multiple Replicas and Scaling](#multiple-replicas-and-scaling)
+    - [Drain Worker Node](#drain-worker-node)
+    - [Docker Stack Deploy](#docker-stack-deploy)
+    - [Remove Worker Nodes from Swarm](#remove-worker-nodes-from-swarm)
+    - [Switch Managers](#switch-managers)
+    - [Replicas in Docker Swarm](#replicas-in-docker-swarm)
 
 ## AWS
 
@@ -1602,3 +1612,211 @@ We can easily change the service type from clusterIP to NodePort. We can do this
 ```
 
 We can undeploy our cluster using `mvn k8s:undeploy`. We can debug applications that are running in our kubernetes cluster through the ide using `mvn k8s:debug` which will start the application in debug mode. It enables port forwarding to port 5005. IN Eclipse, we can launch a remote debugger by going to the debugger, debug configurations -> remote java application -> create new with port 5005.
+
+## Docker Swarm
+
+Docker Swarm is an orchestration tool that comes with Docker. It takes our containers as services and deploys them as a cluster (swarm). It offers autoscaling, fault tolerance, rolling updates, auto discovery, load balancing. Compared to Kubernetes, Docker Swarm is different in how it works, setup, architecture components.
+
+We can create a docker swarm using the command `docker swarm init`. This makes the current node as the manager of the docker swarm cluster. Afterwards, it will generate TLS certificates and tokens wherein other worker and manager nodes can join the swarm. The **Manager Nodes** are responsible for getting the containers deployed to the cluster. There can only be one manager that leads the swarm at a time, and if it goes down, another manager will take its place. **Worker Nodes** are responsible launching the containers and doing the work. Docker Swarm uses the raft database to store its cluster state whereas Kubernetes uses etcd.
+
+Docker Swarm abstracts services and tasks. **Service** is a combination of a docker image, number of replicas. A service results into one or more tasks which will create the container on various worker nodes for us. Services are the central structure of a Docker Swarm whereas in Kubernetes services are for exposing pods. A **Task** is a running container and a part of a service.
+
+#### Architecture
+
+The Manager Node consists of the following architectural components. The **API** is an architectural component that receives all of our docker service commands. It will use the **Orchestrator** which will create the service and maintain that the cluster is in the desired state. The **Allocator** assigns IP addresses to the tasks created by the Orchestrator. Once IP addresses are assigned, the **Dispatcher** will take them and allocate the tasks to the appropriate nodes in the cluster. **Schedulae** makes sure that the tasks are being executed correctly on the worker nodes.
+
+For the Worker Node, we have the **Worker** which checks the dispatcher for any work to be done. The **Executor** will be responsible for executing the work on the worker. The end result would be a container.
+
+The Manager Node uses the RAFT data store to store the complete state of the cluster.
+
+#### Setting up Swarm
+
+The first step is to create 5 EC2 instances wherein there will be two manager and three worker nodes. For each instance, we install docker with `yum install docker -y`. To setup swarm, we first startup docker on a manger node using `service docker start` and then `docker swarm init`. This makes the current instance a manager node with a unique node id in the cluster.
+
+```
+Swarm initialized: current node (i77mtl78vigixmdnosxj2ieri) is now a manager.
+
+To add a worker to this swarm, run the following command:
+
+    docker swarm join --token SWMTKN-1-2pn0ri0g8j249bnrvb1s2zi04yphzr82b2flvz5fotpusn7wd0-2lspsj16icwa30lk2elb1del4 172.31.16.165:2377
+
+To add a manager to this swarm, run 'docker swarm join-token manager' and follow the instructions.
+```
+
+We then need to enable All ICMP IPV4 traffic from anywhere and port 2377 from anywhere of the manager node in our manager1 security group. We can then run the above command to our worker instances. The command `docker node ls` will list out the nodes in the cluster.
+
+```
+ID                            HOSTNAME                                           STATUS    AVAILABILITY   MANAGER STATUS   ENGINE VERSION
+i77mtl78vigixmdnosxj2ieri *   ip-172-31-16-165.ap-southeast-1.compute.internal   Ready     Active         Leader           20.10.7
+2ar2it73ifvi2ytsgdpouqi99     ip-172-31-19-254.ap-southeast-1.compute.internal   Ready     Active                          20.10.7
+jye5cj7vp416b4nfah2awyorv     ip-172-31-26-110.ap-southeast-1.compute.internal   Ready     Active                          20.10.7
+u4h074o709h7xj2lhx8l8quv0     ip-172-31-27-251.ap-southeast-1.compute.internal   Ready     Active                          20.10.7
+```
+
+To add a manager to the swarm, we simply need to run `docker swarm join-token manager`. We can then run the returned command on another instance.
+
+```
+To add a manager to this swarm, run the following command:
+
+    docker swarm join --token SWMTKN-1-2pn0ri0g8j249bnrvb1s2zi04yphzr82b2flvz5fotpusn7wd0-1cd84z5uktxwrneeir8qc393p 172.31.16.165:2377
+```
+
+#### Creating Service
+
+To create a service, we can use the following command
+
+```
+docker service create --name my-server nginx
+```
+
+We can verify that the service got created
+
+```
+docker service ls
+ID             NAME        MODE         REPLICAS   IMAGE          PORTS
+dzohsuytcdwa   my-server   replicated   1/1        nginx:latest
+```
+
+And also we can list out the processes running from that service wherein we can find on which node it is running. We can see that it is currently being run on the ip address of one of our worker nodes.
+
+```
+docker service ps dzohsuytcdwa
+ID             NAME          IMAGE          NODE                                               DESIRED STATE   CURRENT STATE            ERROR     PORTS
+l3gc22f4dgxz   my-server.1   nginx:latest   ip-172-31-27-251.ap-southeast-1.compute.internal   Running         Running 36 seconds ago
+```
+
+If we run `docker ps` and `docker images` on the instance with ip address 172-31-27-251, we will see that the container is running.
+
+```
+docker ps
+CONTAINER ID   IMAGE          COMMAND                  CREATED         STATUS         PORTS     NAMES
+20ba7ccdedd2   nginx:latest   "/docker-entrypoint.…"   4 minutes ago   Up 4 minutes   80/tcp    my-server.1.l3gc22f4dgxz1wib1707zxet4
+
+docker images
+REPOSITORY   TAG       IMAGE ID       CREATED      SIZE
+nginx        <none>    f2f70adc5d89   2 days ago   142MB
+```
+
+To delete the service, we can run the following command in our manager node leader `docker service rm my-server`
+
+#### Multiple Replicas and Scaling
+
+We can specify the number of replicas we want `docker service create --name my-server -p 80:80 --replicas=3 nginx`. We then verify that they have converged
+
+```
+docker service ls
+ID             NAME        MODE         REPLICAS   IMAGE          PORTS
+zok9buak0r84   my-server   replicated   3/3        nginx:latest   *:80->80/tcp
+
+docker service ps zok9buak0r84
+ID             NAME          IMAGE          NODE                                               DESIRED STATE   CURRENT STATE            ERROR     PORTS
+y2kjvdommwev   my-server.1   nginx:latest   ip-172-31-26-110.ap-southeast-1.compute.internal   Running         Running 29 seconds ago
+w6xli3g9uw17   my-server.2   nginx:latest   ip-172-31-16-165.ap-southeast-1.compute.internal   Running         Running 28 seconds ago
+b8szecbrk7df   my-server.3   nginx:latest   ip-172-31-27-251.ap-southeast-1.compute.internal   Running         Running 29 seconds ago
+```
+
+Using `docker service scale my-server=5` we can scale to 5 instances.
+
+```
+docker service ps zok9buak0r84
+ID             NAME          IMAGE          NODE                                               DESIRED STATE   CURRENT STATE            ERROR     PORTS
+y2kjvdommwev   my-server.1   nginx:latest   ip-172-31-26-110.ap-southeast-1.compute.internal   Running         Running 2 minutes ago
+w6xli3g9uw17   my-server.2   nginx:latest   ip-172-31-16-165.ap-southeast-1.compute.internal   Running         Running 2 minutes ago
+b8szecbrk7df   my-server.3   nginx:latest   ip-172-31-27-251.ap-southeast-1.compute.internal   Running         Running 2 minutes ago
+5frhj2uix38d   my-server.4   nginx:latest   ip-172-31-21-138.ap-southeast-1.compute.internal   Running         Running 16 seconds ago
+uaj6skrmriv9   my-server.5   nginx:latest   ip-172-31-19-254.ap-southeast-1.compute.internal   Running         Running 17 seconds ago
+```
+
+We can update the image throughout our replicas using `docker service update --image=nginx:1.16 my-server` and `docker service rollback my-server` to rollback changes.
+
+#### Drain Worker Node
+
+We can bring a node down to do some maintenance work using `docker node update --availability drain`. Whatever replica that is running on that node will be handed off to another node automatically by docker swarm. To return to active status, we can use `--availability active` flag.
+
+```
+[root@ip-172-31-16-165 ~]# docker node ls
+ID                            HOSTNAME                                           STATUS    AVAILABILITY   MANAGER STATUS   ENGINE VERSION
+i77mtl78vigixmdnosxj2ieri *   ip-172-31-16-165.ap-southeast-1.compute.internal   Ready     Active         Leader           20.10.7
+2ar2it73ifvi2ytsgdpouqi99     ip-172-31-19-254.ap-southeast-1.compute.internal   Ready     Active                          20.10.7
+ijtgksac05hdwvduousq883a8     ip-172-31-21-138.ap-southeast-1.compute.internal   Ready     Active         Reachable        20.10.7
+jye5cj7vp416b4nfah2awyorv     ip-172-31-26-110.ap-southeast-1.compute.internal   Ready     Active                          20.10.7
+u4h074o709h7xj2lhx8l8quv0     ip-172-31-27-251.ap-southeast-1.compute.internal   Ready     Active                          20.10.7
+
+[root@ip-172-31-16-165 ~]# docker node update --availability drain ip-172-31-19-254.ap-southeast-1.compute.internal
+ip-172-31-19-254.ap-southeast-1.compute.internal
+
+[root@ip-172-31-16-165 ~]# docker node ls
+ID                            HOSTNAME                                           STATUS    AVAILABILITY   MANAGER STATUS   ENGINE VERSION
+i77mtl78vigixmdnosxj2ieri *   ip-172-31-16-165.ap-southeast-1.compute.internal   Ready     Active         Leader           20.10.7
+2ar2it73ifvi2ytsgdpouqi99     ip-172-31-19-254.ap-southeast-1.compute.internal   Ready     Drain                           20.10.7
+ijtgksac05hdwvduousq883a8     ip-172-31-21-138.ap-southeast-1.compute.internal   Ready     Active         Reachable        20.10.7
+jye5cj7vp416b4nfah2awyorv     ip-172-31-26-110.ap-southeast-1.compute.internal   Ready     Active                          20.10.7
+u4h074o709h7xj2lhx8l8quv0     ip-172-31-27-251.ap-southeast-1.compute.internal   Ready     Active                          20.10.7
+```
+
+#### Docker Stack Deploy
+
+We can also use a docker-compose.yml configuration file to launch containers and replicas in our docker swarm. The same docker-compose file can be used to deploy multiple services as a stack. The biggest difference from a normal docker-compose is we don't need to define a container name when we define our services. We can specify the number of replicas using the _deploy_ property.
+
+Docker Stack Deploy can be used to deploy multiple services in one go. We create the following docker-compose.yml in our manager instance using vi. We then deploy the stack using `docker stack deploy --compose-file docker-compose.yml my-stack` which will create two services for us.
+
+```yml
+version: "3.3"
+services:
+  web:
+    image: httpd
+    ports:
+      - "8080:80"
+  db:
+    image: redis
+```
+
+We can verify that the services got created for us
+
+```
+[root@ip-172-31-16-165 ~]# docker service ls
+ID             NAME           MODE         REPLICAS   IMAGE          PORTS
+zok9buak0r84   my-server      replicated   2/2        nginx:latest   *:80->80/tcp
+4qgk7qqwvpmu   my-stack_db    replicated   1/1        redis:latest
+4frihug2ku4a   my-stack_web   replicated   1/1        httpd:latest   *:8080->80/tcp
+```
+
+#### Remove Worker Nodes from Swarm
+
+To delete a node, we use `docker swarm leave` on the worker node. This will shutdown the node and its work will be automatically transferred to another node.
+
+#### Switch Managers
+
+The recommended way to switch managers using the following. This command guarantees that the other manager will take over.
+
+```
+[root@ip-172-31-16-165 ~]# docker node ls
+ID                            HOSTNAME                                           STATUS    AVAILABILITY   MANAGER STATUS   ENGINE VERSION
+i77mtl78vigixmdnosxj2ieri *   ip-172-31-16-165.ap-southeast-1.compute.internal   Ready     Active         Leader           20.10.7
+2ar2it73ifvi2ytsgdpouqi99     ip-172-31-19-254.ap-southeast-1.compute.internal   Down      Active                          20.10.7
+ijtgksac05hdwvduousq883a8     ip-172-31-21-138.ap-southeast-1.compute.internal   Ready     Active         Reachable        20.10.7
+jye5cj7vp416b4nfah2awyorv     ip-172-31-26-110.ap-southeast-1.compute.internal   Ready     Active                          20.10.7
+u4h074o709h7xj2lhx8l8quv0     ip-172-31-27-251.ap-southeast-1.compute.internal   Ready     Active                          20.10.7
+
+[root@ip-172-31-16-165 ~]# docker node demote ip-172-31-16-165.ap-southeast-1.compute.internal
+Manager ip-172-31-16-165.ap-southeast-1.compute.internal demoted in the swarm.
+```
+
+#### Replicas in Docker Swarm
+
+To have replicas in Docker Swarm, we can use the **deploy** property in docker-compose
+
+```yml
+version: "3.3"
+services:
+  web:
+    image: httpd
+    deploy:
+      replicas: 3
+    ports:
+      - "8080:80"
+  db:
+    image: redis
+    deploy:
+      replicas: 2
+```
