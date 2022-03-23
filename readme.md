@@ -68,6 +68,7 @@
     - [Remove Worker Nodes from Swarm](#remove-worker-nodes-from-swarm)
     - [Switch Managers](#switch-managers)
     - [Replicas in Docker Swarm](#replicas-in-docker-swarm)
+- [AWS Lambda](#aws-lambda)
 
 ## AWS
 
@@ -1819,4 +1820,31 @@ services:
     image: redis
     deploy:
       replicas: 2
+```
+
+## AWS Lambda
+
+AWS Lambda is a serverless compute service which allows us to write code that runs is response to events taht happens in other resources. When the event source triggers our lambda functions, the code we write will be run and our lambda function will be able to interact with other AWS components.
+These components should have the permissions to invoke lambda functions through IAM Resource policies while the lambda function itself will have an IAM Role to access resources.
+
+For this demo, we use node.js runtime. Typically, a lambda function is triggered by an event from other components.
+
+```javascript
+exports.handler = async (event) => {
+  // TODO implement
+  const response = {
+    statusCode: 200,
+    body: JSON.stringify("Hello from Lambda!"),
+  };
+  return response;
+};
+```
+
+Using the test tab, we can create a test event which will pass the json input to the lambda function. It will end up in the event object that the lambda is receiving. The response will be
+
+```json
+{
+  "statusCode": 200,
+  "body": "\"Hello from Lambda!\""
+}
 ```
