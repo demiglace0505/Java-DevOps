@@ -1,74 +1,92 @@
-- [AWS](#aws)
-    - [EC2](#ec2)
-    - [Linux Directories](#linux-directories)
-    - [vi editor](#vi-editor)
-    - [Installing Software](#installing-software)
-- [Git](#git)
-- [Maven](#maven)
-    - [Lifecycle Phases](#lifecycle-phases)
-    - [Coordinates](#coordinates)
-    - [Maven Repositories](#maven-repositories)
-    - [Creating a Maven Project](#creating-a-maven-project)
-- [Project](#project)
-    - [Coupon Service](#coupon-service)
-    - [Product Service](#product-service)
-    - [Integrating Microservices](#integrating-microservices)
-- [Manual Deployment to AWS using S3](#manual-deployment-to-aws-using-s3)
-    - [Automating launch](#automating-launch)
-    - [Creating AMI and Scaling Manually](#creating-ami-and-scaling-manually)
-- [Elastic Load Balancer](#elastic-load-balancer)
-- [Auto Scaling Group](#auto-scaling-group)
-- [CloudWatch and SNS](#cloudwatch-and-sns)
-    - [SNS](#sns)
-    - [Cloudwatch Alarm](#cloudwatch-alarm)
-- [Deploy to Elastic Beanstalk using RDS](#deploy-to-elastic-beanstalk-using-rds)
-    - [Deploying the Coupon Service](#deploying-the-coupon-service)
-    - [Deploying the Product Service](#deploying-the-product-service)
-- [Docker](#docker)
-    - [Docker Components](#docker-components)
-    - [Docker in Action](#docker-in-action)
-    - [Docker Layers and Overlay Storage](#docker-layers-and-overlay-storage)
-    - [Launching a MySQL Container](#launching-a-mysql-container)
-    - [Volumes and Bind Mounts](#volumes-and-bind-mounts)
-    - [Docker Networking](#docker-networking)
-    - [Dockerfile](#dockerfile)
-- [Dockerize Micro Services](#dockerize-micro-services)
-    - [Build Images](#build-images)
-    - [Launch the Containers](#launch-the-containers)
-    - [Docker Hub](#docker-hub)
-- [Docker Compose](#docker-compose)
-    - [Networks](#networks)
-    - [Volumes](#volumes)
-    - [Composing the MySQL Service](#composing-the-mysql-service)
-    - [Composing MicroServices](#composing-microservices)
-- [Kubernetes](#kubernetes)
-    - [Kubernetes Architecture](#kubernetes-architecture)
-    - [Kubernetes Installation Types](#kubernetes-installation-types)
-    - [Kubectl Configuration](#kubectl-configuration)
-    - [Pod](#pod)
-    - [Pod Life Cycle](#pod-life-cycle)
-    - [Labels and Selectors](#labels-and-selectors)
-    - [Namespaces](#namespaces)
-    - [Deployment](#deployment)
-    - [Service](#service)
-    - [Rolling Updates](#rolling-updates)
-    - [Volumes](#volumes-1)
-    - [ConfigMaps](#configmaps)
-    - [Secrets](#secrets)
-    - [Persistent Volumes](#persistent-volumes)
-- [Deploying Microservices to Kubernetes](#deploying-microservices-to-kubernetes)
-- [Eclipse Jkube](#eclipse-jkube)
-- [Docker Swarm](#docker-swarm)
-    - [Architecture](#architecture)
-    - [Setting up Swarm](#setting-up-swarm)
-    - [Creating Service](#creating-service)
-    - [Multiple Replicas and Scaling](#multiple-replicas-and-scaling)
-    - [Drain Worker Node](#drain-worker-node)
-    - [Docker Stack Deploy](#docker-stack-deploy)
-    - [Remove Worker Nodes from Swarm](#remove-worker-nodes-from-swarm)
-    - [Switch Managers](#switch-managers)
-    - [Replicas in Docker Swarm](#replicas-in-docker-swarm)
-- [AWS Lambda](#aws-lambda)
+- [Certificate of Completion](#certificate-of-completion)
+  - [AWS](#aws)
+      - [EC2](#ec2)
+      - [Linux Directories](#linux-directories)
+      - [vi editor](#vi-editor)
+      - [Installing Software](#installing-software)
+  - [Git](#git)
+  - [Maven](#maven)
+      - [Lifecycle Phases](#lifecycle-phases)
+      - [Coordinates](#coordinates)
+      - [Maven Repositories](#maven-repositories)
+      - [Creating a Maven Project](#creating-a-maven-project)
+  - [Project](#project)
+      - [Coupon Service](#coupon-service)
+      - [Product Service](#product-service)
+      - [Integrating Microservices](#integrating-microservices)
+  - [Manual Deployment to AWS using S3](#manual-deployment-to-aws-using-s3)
+      - [Automating launch](#automating-launch)
+      - [Creating AMI and Scaling Manually](#creating-ami-and-scaling-manually)
+  - [Elastic Load Balancer](#elastic-load-balancer)
+  - [Auto Scaling Group](#auto-scaling-group)
+  - [CloudWatch and SNS](#cloudwatch-and-sns)
+      - [SNS](#sns)
+      - [Cloudwatch Alarm](#cloudwatch-alarm)
+  - [Deploy to Elastic Beanstalk using RDS](#deploy-to-elastic-beanstalk-using-rds)
+      - [Deploying the Coupon Service](#deploying-the-coupon-service)
+      - [Deploying the Product Service](#deploying-the-product-service)
+  - [Docker](#docker)
+      - [Docker Components](#docker-components)
+      - [Docker in Action](#docker-in-action)
+      - [Docker Layers and Overlay Storage](#docker-layers-and-overlay-storage)
+      - [Launching a MySQL Container](#launching-a-mysql-container)
+      - [Volumes and Bind Mounts](#volumes-and-bind-mounts)
+      - [Docker Networking](#docker-networking)
+      - [Dockerfile](#dockerfile)
+  - [Dockerize Micro Services](#dockerize-micro-services)
+      - [Build Images](#build-images)
+      - [Launch the Containers](#launch-the-containers)
+      - [Docker Hub](#docker-hub)
+  - [Docker Compose](#docker-compose)
+      - [Networks](#networks)
+      - [Volumes](#volumes)
+      - [Composing the MySQL Service](#composing-the-mysql-service)
+      - [Composing MicroServices](#composing-microservices)
+  - [Kubernetes](#kubernetes)
+      - [Kubernetes Architecture](#kubernetes-architecture)
+      - [Kubernetes Installation Types](#kubernetes-installation-types)
+      - [Kubectl Configuration](#kubectl-configuration)
+      - [Pod](#pod)
+      - [Pod Life Cycle](#pod-life-cycle)
+      - [Labels and Selectors](#labels-and-selectors)
+      - [Namespaces](#namespaces)
+      - [Deployment](#deployment)
+      - [Service](#service)
+      - [Rolling Updates](#rolling-updates)
+      - [Volumes](#volumes-1)
+      - [ConfigMaps](#configmaps)
+      - [Secrets](#secrets)
+      - [Persistent Volumes](#persistent-volumes)
+  - [Deploying Microservices to Kubernetes](#deploying-microservices-to-kubernetes)
+  - [Eclipse Jkube](#eclipse-jkube)
+  - [Docker Swarm](#docker-swarm)
+      - [Architecture](#architecture)
+      - [Setting up Swarm](#setting-up-swarm)
+      - [Creating Service](#creating-service)
+      - [Multiple Replicas and Scaling](#multiple-replicas-and-scaling)
+      - [Drain Worker Node](#drain-worker-node)
+      - [Docker Stack Deploy](#docker-stack-deploy)
+      - [Remove Worker Nodes from Swarm](#remove-worker-nodes-from-swarm)
+      - [Switch Managers](#switch-managers)
+      - [Replicas in Docker Swarm](#replicas-in-docker-swarm)
+  - [AWS Lambda](#aws-lambda)
+  - [Ansible](#ansible)
+      - [Master and Agent](#master-and-agent)
+      - [Playbook](#playbook)
+      - [Tags](#tags)
+  - [Jenkins](#jenkins)
+      - [Jobs](#jobs)
+      - [Build Triggers](#build-triggers)
+      - [Deployment](#deployment-1)
+      - [Webhooks](#webhooks)
+      - [Master and Slave](#master-and-slave)
+  - [Jenkins Pipelines](#jenkins-pipelines)
+      - [Creating a Java Project pipeline](#creating-a-java-project-pipeline)
+      - [Java Web Project Pipeline](#java-web-project-pipeline)
+
+# Certificate of Completion
+
+![Certificate of Completion](UC-a69b4513-4a46-4fca-a5e8-0a2c8970a6eb.jpg)
 
 ## AWS
 
@@ -1848,3 +1866,350 @@ Using the test tab, we can create a test event which will pass the json input to
   "body": "\"Hello from Lambda!\""
 }
 ```
+
+## Ansible
+
+Ansible is a provisioning/configuration management tool. Using it, we can push whatever services are required to make our microservices function across multiple nodes. Ansible is agentless which means we don't need to install software on the host machines. We just need to setup Ansible on the master machine and we can execute adhoc commands using SSH to be executed on the host machine. Using playbooks, we can install software in a single shot in exactly the same way in multiple machines.
+
+The **master node** is where we will be installing Ansible. The **managed nodes** are where we want to install software. **Inventory** is a configuration file where the information of all the managed nodes such as ip address etc. The inventory is maintained in the master node. **Modules** are provided by Ansible and are used to perform certain tasks such as copying files, installing software on the host machine.
+
+#### Master and Agent
+
+To create the Ansible master and agent nodes, we can use two Ubuntu EC2 instances. For the master, we need to install ansible and for the agent, we only need python. We can install ansible on the master using the commands. To install python, we use `sudo apt install python3`
+
+```
+$ sudo apt update
+$ sudo apt install software-properties-common
+$ sudo add-apt-repository --yes --update ppa:ansible/ansible
+$ sudo apt install ansible
+```
+
+We also make sure to add an inbound rule in our security group to allow all icmp ipv4 traffic from any ip address. After adding the inbound rule, we can try pinging each instance. The next step is to setup SSH between the two instances. In the master, we can generate a key pair using `ssh-keygen`. This will generate the id_rsa private key and id_rsa public key which we need to copy to the agent. On the agent machine, we navigate to ~/.ssh and then add the contents of the id_rsa.pub file from the master.
+
+```
+ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCjzlBwb2TSlIbzF6Fg8LV9pMkqYBCXGSFdmC0hcGNqZibSMdeARf2tbm6TewL0nP6ZAmA/7QxOgGcU4An4NTAmyMdlnuklbZVkSMQuZBpoWrp10ER36GkOxqvS6rW5wdxWAmO4YolDDuWLK2RBWzFZwEg3GRejc/oDcPOR0FsDeMVyFaIPfswjNOnD/q40xbxaDwMd7BUCzptCQHObOTLRhRCAfysxx1S5VOguJjSkgRvdU2k+uOylk5oRRVHOJ+8Lg5cHkZKzlypAHP1XdLi0NmYkPWsb8Xc7T/EfO/5wIyLL9BX4jeWThiyun9Ae7y4Go0oph4KgCqXOJfSnzG3H awskeys
+
+ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDWsdCtdGcingTadJ6V0hLuYMNLYl8cFb0+bBR+n092Z2kUB1fF7m6S3nnV9cqaKhkKhF4CTw8dfu3MWjCkOJH26fDeweCs6X6kpVW7xyBWJ60MHIgDDUl+piJ/ITcXeSl4p3373aj0rn+47hDe4eVsAW+mUNgToYYUk7c8x9+6n9N/LV8UNtcqMGRt02YJWenF77sywoSshLRPLki0RdXKtFrBixe5Y7jCNvIuyY/4RJlxPPIke72y//R/+80uwxzyE5ImaAWnuOARwPzrYrAkf0tvQgp36gVhC9+x07KgVVmE4wn/TgaKbcNSKadXu6S+oJjO3BYnCeoTnprIJ07z4/0CCVRmNDJZo9J9yK0qt7s08R209FDj4HBMpUjX3JwjK9R8E9q+1fKuITRqTod0VATi74oIFtmeEng7PkliMYlK9YlKLRolztLxjQHUFfWpOjA8JzMVNSpEeha2oJ5ccdyIosMiGUoh7ecClMtezlMocL/Hmc7nqpjxDL357+8= root@ip-172-31-22-95
+```
+
+Now, the agent has the public key while the master has the private key. These keys will be used for the ssh communication. We can try doing an ssh from the master to the agent using `ssh root@172.31.16.232`. This proves that ssh works between the two instances.
+
+In the master node, we navigate to `/etc/ansible` and from there, add the agent's ip address to the **hosts** file. Afterwards we can run `ansible 172.31.16.232 -m ping` to ping the agent. Any ansible syntax has the following format.
+
+```
+ansible <group> -m <module>
+```
+
+We can also configure a hostname mapping instead of the ip address. On the master, we edit the `/etc/hosts` file and add the private ip address of the agent. Instead of using the ip address in the /etc/ansible/hosts file, we can use agent1 instead.
+
+```
+127.0.0.1 localhost
+172.31.16.232 agent1
+```
+
+To create a file on the remote machine, we can use the file module `ansible agent1 -m file -a 'path=/root/test.txt state=touch mode=0770 owner=root'`
+
+To install apache remotely, we can use the following commands on the ansible master. At this point, we need to open up port 80 on the agent node.
+
+```
+ansible agent1 -m command -a "apt update"
+ansible agent1 -m command -a "apt upgrade"
+ansible agent1 -m command -a "apt install apache2"
+```
+
+After apache has been installed, we need to start up apache. We can do so with `ansible agent1 -m service -a "name=apache2 state=started"`
+
+#### Playbook
+
+The following playbook copies a file to the agent and will add content to that file dynamically. In this playbook, we can define variables. In this case, we assign "Hello Ansible" to the _msg_ variable. The **tasks** field is where we will define tasks to be executed. The **copy** module has the _dest_ attribute which is where we want to create a file abc.txt and the _content_ attribute will be what we defined in the msg variable. we can run it using `ansible-playbook filecopy.yml`
+
+```yml
+- hosts: agent1
+  vars:
+    msg: "Hello Ansible"
+  tasks:
+    - name: Test
+      copy:
+        dest: /root/abc.txt
+        content: "{{msg}}"
+```
+
+The following playbook creates a bunch of directories on the agent using loops. Here we use the **file** module to create directories. The _item_ attribute will be obtained dynamically with the _with_items_ syntax wherein we pass the directory names. When we run the playbook, it will loop throug these items and its value will be used in {{item}}.
+
+```yml
+- hosts: agent1
+  tasks:
+    - name: create directories if they do not exist
+      file:
+        path: "{{item}}"
+        state: directory
+      with_items:
+        - dir1
+        - dir2
+```
+
+The playbook below can be used to install git and mysql to the agent node. For this, we use the **apt** module since we are using an Ubuntu machine.
+
+```yml
+- hosts: agent1
+  tasks:
+    - name: install packages
+      apt:
+        name:
+          - git
+          - mysql-server
+        update_cache: yes
+```
+
+#### Tags
+
+We can use the previous playbook and extend it to start mysql.
+
+```yml
+- hosts: agent1
+  tasks:
+    - name: install packages
+      apt:
+        name:
+          - git
+          - mysql-server
+        update_cache: yes
+    - name: Start mysql
+      service: name=mysql state=started
+```
+
+If we need to skip the installation task, we can use Ansible tasks. We can tag the tasks. Now to run a particular task, we can do `ansible-playbook installpackages.yml --tags "start"`. This way, only the tags that are specified will be run. `--skip-tags` can be used to skip particular tasks.
+
+```yml
+- hosts: agent1
+  tasks:
+    - name: install packages
+      apt:
+        name:
+          - git
+          - mysql-server
+        update_cache: yes
+      tags:
+        - install
+    - name: Start mysql
+      service: name=mysql state=started
+      tags:
+        - start
+```
+
+If we want to list out all the tasks in a playbook, we can do `ansible-playbook installpackages.yml --list-tasks`. There are also special tags: `always` and `never`. By default, the Gathering Facts tag is marked with always. If we tag a task with always, it will always get executed and we have to skip it manually if needed.
+
+## Jenkins
+
+Jenkins is a CICD framework that can be used throughout the delivery pipeline
+
+1. Code and Commit - GitHub SVN
+2. Build and Configuration - Maven Gradle Docker Ant
+3. Testing - Junit Sonar Selenium Cucumber
+4. Release - XL Release uDeploy UrbanCode
+5. Deploy - AWS Web Logic OpenStack
+
+To install Jenkins and build Maven projects, we can use an AWS EC2 instance wherein we install maven and java. From there, we create a maven standalone java-project and java-web-project.
+
+```
+yum install java-1.8.0-openjdk
+yum install maven
+
+mvn archetype:generate -DgroupId=com.bharath -DartifactId=java-project -DarchetypeArtifactId=maven-archetype-quickstart -DinteractiveMode=false
+
+mvn archetype:generate -DgroupId=com.bharath -DartifactId=java-web-project -DarchetypeArtifactId=maven-archetype-webapp -DinteractiveMode=false
+```
+
+To install jenkins, we can use the following commands:
+
+```
+wget -O /etc/yum.repos.d/jenkins.repo http://pkg.jenkins-ci.org/redhat/jenkins.repo
+rpm --import https://pkg.jenkins.io/redhat/jenkins.io.key
+yum install jenkins
+```
+
+Afterwards we open port 8080 of the ec2 instance and we can start jenkins using `service jenkins start`. At this point, we can visit port 8080 of the ec2 instance via the web browser and we will be able to access the Jenkins dashboard. The dashboard will prompt us with an administrator password. To get the password, we can use `cat /var/lib/jenkins/secrets/initialAdminPassword`. We can go and install the suggested plugins from the dashboard. When we start working with jenkins, it will store all of its working information under `/var/lib/jenkins`. We need to delete this directory whenever we uninstall jenkins.
+
+Under Manage Jenkins -> Global Tool Configuration, we can configure the paths to Java, Maven and Swarm. The path for git will be `/usr/bin/git`. To determine the home directory of maven and Java, we can use `mvn -version`
+
+```
+Maven home: /usr/share/maven
+Java version: 1.8.0_312, vendor: Red Hat, Inc.
+Java home: /usr/lib/jvm/java-1.8.0-openjdk-1.8.0.312.b07-1.amzn2.0.2.x86_64
+```
+
+Before creating jobs, we need to first configure the root user permissions. We can assign the root user and permissions using the following command
+
+```
+vi /etc/sysconfig/jenkins
+
+JENKINS_USER="root"
+```
+
+Afterwards we change ownership of some jenkins folders. We do a restart after changing ownership with `service jenkins restart`.
+
+```
+chown -R root:root /var/lib/jenkins !!! causes jenkins to break
+chown -R root:root /var/cache/jenkins
+chown -R root:root /var/log/jenkins
+```
+
+#### Jobs
+
+To create a jekins job, we start by creating a shell script. We need to make sure to give 777 permissions to the script.
+
+```
+vi hello.sh
+
+echo "Hello Jenkins!"
+
+chmod 777 hello.sh
+```
+
+Afterwards, under the jenkins dashboard, we can go to New Item and select **freestyle project**. Under **Build** we select Execute shell and give the command `/root/hello.sh`. Once we click build, jenkins will run the job.
+
+To build a maven project from within a jenkins job, we can create a new freestyle project and under the build step, **Invoke top level Maven targets** and for the goal, we use `clean install`. Under the advanced section, we specify the location of the POM.xml to point to the pom.xml in our ec2 machine `/root/java-project/pom.xml`.
+
+We can pull from a remote Git repository using a jenkins job as well. We first install the Maven Integration plugin which will allow us to choose **Maven Project** under new item. Under the Source Code Management tab, we need to specify the git repository url. In the Build tab, we specify the goals as `clean package`
+
+#### Build Triggers
+
+To automated building, we can use Build Triggers. Under our job's Configure, we can go to the Build Triggers tab. Build whenever a SNAPSHOT dependency is built means that whenever other maven projects are built that is a dependency of this project, this project will be built as well. This is important for continuous integration. **Build Periodically** is like a CRON job wherein we can schedule a job by providing times. **Poll SCM** is where a repository will be constantly pulled.
+
+#### Deployment
+
+To deploy a WAR file to a apache tomcat instance from within jenkins, we start by installing Tomcat on a new EC2 instance. We will be creating a new Deployment User on the Tomcat console, and in jenkins, we need to install the Deployment plugin.
+
+We create a new ec2 instance for this. From within here, we install tomcat. After installing, we can start tomcat using `service tomcat start`. Afterwards, we can visit the ec2 ip's port 8080 to be able to access the tomcat dashboard.
+
+```
+yum install java-1.8.0-openjdk
+yum install tomcat
+yum install tomcat-webapps tomcat-admin-webapps
+```
+
+Afterwards, we need to configure the tomcat users so we can access the tomcat Manager App and also for our jenkins Deployment. The following will give us a new user with username and password _deployer_.
+
+```xml
+vi /usr/share/tomcat/conf/tomcat-users.xml
+
+<role rolename="admin"/>
+<role rolename="admin-gui"/>
+<role rolename="admin-script"/>
+<role rolename="manager"/>
+<role rolename="manager-gui"/>
+<role rolename="manager-script"/>
+<role rolename="manager-jmx"/>
+<role rolename="manager-status"/>
+<user username="deployer" password="deployer" roles="manager-script" />
+<user name="admin" password="admin" roles="admin,manager,admin-gui,admin-script,manager-gui,manager-script,manager-jmx,manager-status" />
+```
+
+In jenkins, we need to install the plugin **deploy to container**. We can now create a jenkins job that will pull from our github repo and then push it to the tomcat instance. For this, we use freestyle project and specify under source code management the url of our git repo. Under Build, we invoke top level Maven target with goal `clean package` to create a war file.
+
+Under Post build actions, we select **Deploy war/ear to a container** which is available thanks to the plugin we installed. We specify `**/java-web-project.war` as the WAR/EAR file and context path will be `javawebapp`. Container will be tomcat 7.x. Here, we use the credentials with username and password _deployer_. Tomcat URL will be the amazon instance's port 8080.
+
+These will allow jenkins to build and deploy to tomcat. At this point, we can see /javawebapp under our tomcat manager. If we click the link to /javawebapp in tomcat manager, we will be greeted by Hello World.
+
+#### Webhooks
+
+For CICD, we can use webhooks to tell jenkins that an update has happened in our repository. This is so when we do a push to the github repo, github will notify our jenkins job to trigger a build. The payload URL will be the jenkins url. In this case, the port 80 of our ec2 instance plus github-webhook/. `http://ec2-52-221-180-103.ap-southeast-1.compute.amazonaws.com:8080/github-webhook/`. The _Secret_ can be used to sign the webhook message for security. In our jenkins project, we need to enable **Github hook trigger for GitScm polling** which means that a build will be trigger through a github webhook.
+
+#### Master and Slave
+
+So far, we have installed jenkins only on a single ec2 instance which we use to run our jobs. In the cases where we have a high load or we need to run a job on a particular environment, we can use the master/slave architecture. We can create multiple slaves with one master machine where jenkins is installed. The master will push the job to the slave machines. We can do this by creating an ec2 slave instance, configuring SSH and then configuring a node on the master instance.
+
+Using `ssh-keygen` on the master instance, we can generate a private and public key. We can get our keys using `cat ~/.ssh/id_rsa.pub`. The private key will be used by jenkins when configuring the slave, and the public key will go to the authorization keys file of the slave. We then proceed on creating the slave ec2 instance. In the slave instance, we copy the public key and paste it into authorized_keys. Afterwards we install java with `yum install java-1.8.0-openjdk`
+
+Afterwards, we create a node using the master jenkins dashboard. We can do so under Manage Jenkins -> Manage Nodes and Clouds. The remote root directory shall be `/home/ec2-user`. **Launch method** will be Launch agents via SSH. The **Host** will be the pubkuc ip address of the slave ec2 instance. **Credentials** will be SSH username with private key where username will be ec2-user. Here we paste the private key we obtained earlier. **Verification Strategy** will be manually trusted key verification strategy.
+
+To see our node slave in action, we created two jobs wherein we pass the shell command `sleep 30s`. This will take time and is intended to make the master pass on the job to the node.
+
+## Jenkins Pipelines
+
+A pipeline allows us to create a repeatable, reliable, automated system for getting our product to the customer quickly. It is a combination of multiple staged such as commit, build, test, stage, qa, deploy. We usually create a Jenkinsfile under our project.
+
+We can create a pipeline under new item -> pipeline. Here we can write out our own pipeline script. The following is an example of a multistage pipeline. We can access jenkins environment variables from within our jobs easily. Jenkins by default exposes out environment variables that it uses. We can find this in `http://ec2-52-221-180-103.ap-southeast-1.compute.amazonaws.com:8080/env-vars.html/`. We can also pass parameters to our pipeline by ticking **Thisproject is parameterized**. These parameters can be passed in at runtime. We can also ask for user input using `input`. When the pipeline reaches the Approval stage, it would pause and prompt us if we want to proceed or build.
+
+```
+pipeline{
+    agent any
+    stages{
+        stage("checkout"){
+            steps{
+                echo "Checkout started"
+                echo "Running ${env.BUILD_NUMBER} on ${env.JENKINS_URL}"
+            }
+        }
+        stage("Build"){
+            steps{
+                echo "Building project"
+            }
+        }
+        stage("test"){
+            steps{
+                echo "Testing project"
+                echo "${skiptests}"
+            }
+        }
+        stage("Approval") {
+            steps{
+                input "Have all the tests passed?"
+            }
+        }
+        stage("Deploy"){
+            steps{
+                echo "Deploying"
+            }
+        }
+    }
+}
+```
+
+#### Creating a Java Project pipeline
+
+We create a new pipeline in jenkins and under build triggers we enable github hook trigger for GITScm polling. Under Pipeline, we use PipelineScript from SCM. We create the following Jenkinsfile in our git repo:
+
+```
+pipeline{
+    agent any
+    stages{
+        stage("Build") {
+            steps{
+                sh 'mvn -DskipTests clean package'
+            }
+        }
+        stage("Test") {
+            steps{
+                sh 'mvn test'
+            }
+        }
+    }
+}
+```
+
+Its a good idea to run the build pipeline at least once manually before testing it with the webhook.
+
+#### Java Web Project Pipeline
+
+In this section we built a jenkins pipeline for a java maven web application. The pipeline does everything including deploying to tomcat. Instead of manually typing out the pipeline, we used the snippet generator and used the sample step for **Deploy war/ear to container**. In here we specify WAR/EAR files as `**/java-web-project.war` and Context path `javawebapp`. Container will be tomcat 7.x wherein we pass the public ip of the ec2 instance.
+
+```
+pipeline{
+    agent any
+    stages {
+        stage("Build"){
+            steps {
+                sh "mvn clean package"
+            }
+        }
+        stage("Deploy") {
+            steps {
+                deploy adapters: [tomcat7(credentialsId: '82d45004-9d0d-45f5-a576-8f3f82c2216b', path: '', url: 'http://ec2-13-250-44-20.ap-southeast-1.compute.amazonaws.com:8080/')], contextPath: 'javawebapp', war: '**/java-web-project.war'
+            }
+        }
+    }
+}
+```
+
+Afterwards ,we proceed on creating the webhook from github with payload `http://ec2-52-221-180-103.ap-southeast-1.compute.amazonaws.com:8080/github-webhook`
